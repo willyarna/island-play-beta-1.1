@@ -1,0 +1,62 @@
+{
+  "name": "Larsa Play",
+  "source": "ui-ux-pro-max + ajustes para plataforma SaaS de gestion streaming",
+  "mode": "dark",
+  "style": "OLED dark dashboard, professional SaaS, subtle glass, neon accents",
+  "fonts": {
+    "currentProject": "Poppins via next/font/google",
+    "recommendedAlternative": {
+      "heading": "Fira Code",
+      "body": "Fira Sans",
+      "googleFonts": "https://fonts.google.com/share?selection.family=Fira+Code:wght@400;500;600;700|Fira+Sans:wght@300;400;500;600;700"
+    }
+  },
+  "colors": {
+    "background": "#050507",
+    "surface": "#1f232b",
+    "surfaceElevated": "#272b34",
+    "surfaceOverlay": "#4b4f58",
+    "foreground": "#f8fafc",
+    "mutedForeground": "#aeb4c0",
+    "border": "#343a46",
+    "primary": "#22d3ee",
+    "primaryAlt": "#a855f7",
+    "accent": "#00d26a",
+    "warning": "#facc15",
+    "danger": "#ff174f",
+    "orange": "#fb923c",
+    "info": "#0ea5e9"
+  },
+  "status": {
+    "active": "#00d26a",
+    "inactive": "#ff174f",
+    "due5Days": "#00d26a",
+    "due4Days": "#facc15",
+    "due2Days": "#fb923c",
+    "due1OrExpired": "#ff174f"
+  },
+  "radius": {
+    "sm": "10px",
+    "md": "14px",
+    "lg": "22px",
+    "pill": "999px"
+  },
+  "shadow": {
+    "glowPrimary": "0 0 24px rgba(34, 211, 238, 0.28)",
+    "glowAccent": "0 0 24px rgba(0, 210, 106, 0.28)",
+    "glowDanger": "0 0 24px rgba(255, 23, 79, 0.25)"
+  },
+  "motion": {
+    "fast": "150ms",
+    "normal": "220ms",
+    "slow": "320ms",
+    "easing": "cubic-bezier(0.22, 1, 0.36, 1)"
+  },
+  "accessibility": {
+    "minTouchTarget": "44px",
+    "normalTextContrast": "4.5:1",
+    "largeTextContrast": "3:1",
+    "iconOnlyButtonsRequireAriaLabel": true,
+    "reducedMotionRequired": true
+  }
+}

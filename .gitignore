@@ -1,0 +1,23 @@
+node_modules
+.next
+.env
+.env.local
+.env.*.local
+dist
+coverage
+*.log
+tsconfig.tsbuildinfo
+
+# Codex/local agent state
+.agents
+.codex
+skills-lock.json
+
+# Private reverse-engineering notes and third-party screenshots
+docs/research/NETFLY_ACCESS.md
+docs/research/NETFLY_GAP_ANALYSIS.md
+docs/research/netfly
+docs/design-references/netfly
+scripts/netfly-*.mjs
+app.js
+.vercel

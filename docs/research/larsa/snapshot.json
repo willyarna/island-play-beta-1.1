@@ -1,0 +1,44 @@
+{
+  "url": "http://127.0.0.1:3000/",
+  "bodyText": "L\nLARSAPLAY\n◴ Vence en 25 días\n0 Créditos\nSalir\nLP\n▣\nTienda\n⟳\nMovimientos\n▭\nCuentas\n♟\nClientes\n◫\nServicios\n◉\nConexión\n⌁\nReportes\nServicio\nSeleccione un servicio\nNETFLIX\nListado de cuentas\n+ Nuevo\n☁ Exportar\n⌕\n#\tCuenta\tContraseña\tPerfiles\tFacturación\tRestantes\tAcciones\n1\t\nN\nNETFLIX\ndemo.netflix@larsaplay.local\n\tdemo1234\t\n♟\n♟\n♟\n♟\n♟\n\t17/8/2026\t30 días\t\n●\n✎\n■",
+  "buttons": [
+    "Salir",
+    "▣Tienda",
+    "⟳Movimientos",
+    "▭Cuentas",
+    "♟Clientes",
+    "◫Servicios",
+    "◉Conexión",
+    "⌁Reportes",
+    "+ Nuevo",
+    "☁ Exportar",
+    "●",
+    "✎",
+    "■",
+    ""
+  ],
+  "tables": [
+    {
+      "headers": [
+        "#",
+        "Cuenta",
+        "Contraseña",
+        "Perfiles",
+        "Facturación",
+        "Restantes",
+        "Acciones"
+      ],
+      "rows": [
+        [
+          "1",
+          "NNETFLIXdemo.netflix@larsaplay.local",
+          "demo1234",
+          "♟♟♟♟♟",
+          "17/8/2026",
+          "30 días",
+          "●✎■"
+        ]
+      ]
+    }
+  ]
+}

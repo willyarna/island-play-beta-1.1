@@ -1,0 +1,49 @@
+{
+  "name": "larsa-play",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
+    "dev:local": "PRISMA_QUERY_ENGINE_LIBRARY=/tmp/larsa-prisma-engines/libquery_engine-debian-openssl-3.0.x.so.node node node_modules/next/dist/bin/next dev --webpack",
+    "build:local": "XDG_CACHE_HOME=/tmp/larsa-xdg-cache PRISMA_ENGINES_CACHE_DIR=/tmp/larsa-prisma-cache PRISMA_SCHEMA_ENGINE_BINARY=/tmp/larsa-prisma-engines/schema-engine-debian-openssl-3.0.x PRISMA_QUERY_ENGINE_LIBRARY=/tmp/larsa-prisma-engines/libquery_engine-debian-openssl-3.0.x.so.node node node_modules/prisma/build/index.js generate && node node_modules/next/dist/bin/next build",
+    "prisma:migrate:local": "XDG_CACHE_HOME=/tmp/larsa-xdg-cache PRISMA_ENGINES_CACHE_DIR=/tmp/larsa-prisma-cache PRISMA_SCHEMA_ENGINE_BINARY=/tmp/larsa-prisma-engines/schema-engine-debian-openssl-3.0.x PRISMA_QUERY_ENGINE_LIBRARY=/tmp/larsa-prisma-engines/libquery_engine-debian-openssl-3.0.x.so.node node node_modules/prisma/build/index.js migrate dev",
+    "db:seed:local": "ESBUILD_BINARY_PATH=/tmp/larsa-esbuild/esbuild PRISMA_QUERY_ENGINE_LIBRARY=/tmp/larsa-prisma-engines/libquery_engine-debian-openssl-3.0.x.so.node node node_modules/tsx/dist/cli.mjs prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.12.0",
+    "bcryptjs": "^3.0.2",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.25.0",
+    "next": "^16.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^24.0.15",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "playwright": "^1.61.1",
+    "prisma": "^6.12.0",
+    "tailwindcss": "^4.1.11",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "prisma@6.19.3": true,
+    "sharp@0.34.5": true,
+    "esbuild@0.28.1": true
+  }
+}

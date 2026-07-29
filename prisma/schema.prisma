@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  PAUSED
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProfileStatus {
+  FREE
+  OCCUPIED
+}
+
+enum MovementType {
+  INCOME
+  EXPENSE
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+  status       UserStatus @default(ACTIVE)
+  accessUntil  DateTime?
+  sessions     Session[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  @@index([status])
+  @@index([deletedAt, createdAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Provider {
+  id        String    @id @default(cuid())
+  name      String
+  contact   String?
+  supportPhone String?
+  paymentPhone String?
+  notes     String?
+  products  Product[]
+  offers    ProviderOffer[]
+  accounts  Account[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([deletedAt, createdAt])
+}
+
+model ProviderOffer {
+  id          String    @id @default(cuid())
+  providerId  String
+  productId   String
+  costCents   Int       @default(0)
+  active      Boolean   @default(true)
+  provider    Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([providerId])
+  @@index([productId])
+  @@index([active, deletedAt])
+}
+
+model Product {
+  id         String    @id @default(cuid())
+  name       String
+  link       String?
+  imageUrl   String?
+  color      String    @default("#e50914")
+  priceCents Int       @default(0)
+  costCents  Int       @default(0)
+  maxProfiles Int      @default(5)
+  active     Boolean   @default(true)
+  providerId String?
+  provider   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  providerOffers ProviderOffer[]
+  comboItems ComboItem[]
+  accounts   Account[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  @@index([providerId])
+  @@index([active, deletedAt])
+  @@index([deletedAt, createdAt])
+}
+
+model Combo {
+  id          String      @id @default(cuid())
+  name        String
+  saleCents   Int         @default(0)
+  costCents   Int         @default(0)
+  notes       String?
+  active      Boolean     @default(true)
+  items       ComboItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
+
+  @@index([active, deletedAt])
+  @@index([deletedAt, createdAt])
+}
+
+model ComboItem {
+  id        String   @id @default(cuid())
+  comboId   String
+  productId String
+  combo     Combo    @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([comboId, productId])
+  @@index([comboId])
+  @@index([productId])
+}
+
+model Account {
+  id            String    @id @default(cuid())
+  productId     String
+  providerId    String?
+  email         String
+  password      String
+  notes         String?
+  billingDate   DateTime
+  purchaseCents Int       @default(0)
+  hidden        Boolean   @default(false)
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  provider      Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  profiles      Profile[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@index([productId])
+  @@index([providerId])
+  @@index([billingDate])
+  @@index([hidden, deletedAt])
+}
+
+model Client {
+  id        String       @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  notes     String?
+  status    ClientStatus @default(INACTIVE)
+  profiles  Profile[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime?
+
+  @@index([status])
+  @@index([deletedAt, createdAt])
+}
+
+model Profile {
+  id          String        @id @default(cuid())
+  accountId   String
+  clientId    String?
+  name        String
+  pin         String?
+  dueDate     DateTime
+  soldCents   Int           @default(0)
+  status      ProfileStatus @default(FREE)
+  account     Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  client      Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  @@index([accountId])
+  @@index([clientId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+model Movement {
+  id        String       @id @default(cuid())
+  type      MovementType
+  concept   String
+  amountCents Int
+  date      DateTime
+  createdAt DateTime     @default(now())
+
+  @@index([type, date])
+  @@index([date])
+}
+
+model Setting {
+  id                String   @id @default("default")
+  credits           Int      @default(0)
+  accessUntil       DateTime?
+  whatsappConnected Boolean  @default(false)
+  n8nWebhook        String?
+  reminderDays      Int      @default(2)
+  template          String
+  updatedAt         DateTime @updatedAt
+}
