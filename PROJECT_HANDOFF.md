@@ -8,6 +8,8 @@ Island Play es una plataforma para revendedores de servicios digitales y streami
 
 La dirección confirmada es evolucionar la beta actual hacia un SaaS multi-tenant. Cada revendedor será una `Organization`, con datos operativos aislados. La arquitectura seguirá siendo inicialmente un monolito modular; no se migrará a microservicios sin una necesidad real.
 
+La estrategia de seguridad para credenciales recuperables ya fue aprobada y está documentada en `docs/architecture/CREDENTIAL_SECURITY.md`. Todavía no está implementada: el comportamiento AS-IS continúa vigente hasta completar y verificar la migración.
+
 ## Estado actual
 
 **Beta mononegocio funcional. No preparada aún para onboarding SaaS multi-tenant.**
@@ -72,8 +74,9 @@ La configuración efectiva de backups, observabilidad, alertas y rollback no est
 - La suscripción pertenecerá a la organización.
 - Se contemplan accesos `TRIAL`, `PAID` y `ADMIN_GRANT`, o equivalentes.
 - Los planes iniciales serán al menos `BASIC` y `PREMIUM`.
-- Seguridad, aislamiento y estabilidad estarán disponibles en todos los planes.
-- Premium se diferenciará principalmente por automatizaciones.
+- BASIC tendrá inicialmente capacidad para hasta 100 clientes finales activos por `Organization`.
+- PREMIUM podrá ofrecer mayor capacidad de clientes, con límite exacto todavía por definir, y se diferenciará principalmente por automatizaciones.
+- Seguridad, aislamiento, integridad y auditoría mínima estarán disponibles en todos los planes.
 - Se buscará registro autoservicio, OAuth y pagos internacionales.
 - n8n podrá orquestar automatizaciones, pero Island Play seguirá siendo la fuente de verdad.
 - Se mantendrá un monolito modular mientras no exista una razón real para separarlo.
@@ -95,20 +98,21 @@ El registro normativo completo está en `docs/architecture/DECISIONS.md`.
 
 ## Rama y fase actual
 
-- Rama de trabajo: `docs/as-is-audit`.
-- Fase: baseline, auditoría AS-IS y documentación oficial.
-- No hay cambios de aplicación o base de datos autorizados en esta fase.
+- Rama de trabajo: `security/credential-hardening`.
+- Fase: **B — contención de riesgos críticos actuales**.
+- Estado: dirección de seguridad de credenciales aprobada y documentada; implementación todavía no iniciada.
 
 ## Lectura obligatoria
 
 1. `AGENTS.md` — reglas operativas del repositorio.
 2. `docs/architecture/AS_IS.md` — descripción técnica comprobada del sistema actual.
 3. `docs/architecture/DECISIONS.md` — decisiones aceptadas por el propietario.
-4. `docs/ROADMAP.md` — orden de macrofases.
+4. `docs/architecture/CREDENTIAL_SECURITY.md` — contrato arquitectónico aprobado para custodia, exposición, entrega, migración y rotación de credenciales.
+5. `docs/ROADMAP.md` — orden de macrofases.
 
-## Siguiente fase
+## Siguiente paso
 
-La siguiente macrofase es **contención de riesgos críticos actuales**, seguida de pruebas mínimas de seguridad/dominio y de la fundación `Organization`/tenant. Antes de diseñar tareas técnicas debe resolverse la política de custodia de credenciales de streaming y concretarse el modelo de autorización.
+El siguiente paso es **B1 — contrato criptográfico + tests**. Deberá implementar y verificar el contrato AES-256-GCM y `KeyProvider` aprobado, sin iniciar todavía la migración destructiva de datos. Después continuará la minimización de DTOs, el revelado explícito y la migración expand → migrate → contract conforme al documento de seguridad.
 
 ## Reglas de seguridad
 

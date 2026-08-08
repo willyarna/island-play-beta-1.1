@@ -4,7 +4,7 @@
 
 Este documento registra las decisiones confirmadas por el propietario después de revisar la auditoría AS-IS. Todas tienen estado `ACCEPTED`.
 
-No define todavía el modelo Prisma definitivo, la pasarela de pago, el proveedor de WhatsApp, el mecanismo exacto de cifrado ni tareas de implementación. Esas decisiones requieren diseño posterior.
+No define todavía el modelo Prisma definitivo, la pasarela de pago, el proveedor de WhatsApp ni tareas de implementación. La dirección criptográfica inicial ya fue aprobada, pero su representación física y su implementación requieren trabajo posterior.
 
 ## D-001 — Evolución a SaaS multi-tenant
 
@@ -306,17 +306,278 @@ No define todavía el modelo Prisma definitivo, la pasarela de pago, el proveedo
 
 **Consecuencias:** Los módulos deberán tener responsabilidades y contratos identificables; una extracción futura se evaluará mediante evidencia de escala, riesgo u operación.
 
+## D-031 — `Account.password` es un secreto recuperable
+
+**Estado:** ACCEPTED
+
+**Decisión:** La contraseña de una cuenta de streaming se tratará como secreto recuperable, se protegerá mediante cifrado reversible autenticado y no usará hashing irreversible.
+
+**Motivo:** Island Play debe poder entregar y volver a entregar la credencial actualmente válida al cliente final.
+
+**Consecuencias:** El plaintext solo podrá recuperarse en operaciones explícitas y autorizadas.
+
+## D-032 — `Profile.pin` es una credencial sensible
+
+**Estado:** ACCEPTED
+
+**Decisión:** El PIN de perfil se cifrará siguiendo el mismo principio de protección y minimización que `Account.password`.
+
+**Motivo:** El PIN forma parte del acceso que se entrega al cliente final.
+
+**Consecuencias:** Listados y DTOs normales tampoco deberán contener PIN ni material criptográfico relacionado.
+
+## D-033 — `Account.email` permanece inicialmente en plaintext
+
+**Estado:** ACCEPTED
+
+**Decisión:** El email o usuario de la cuenta permanecerá inicialmente en plaintext y se tratará como dato privado del tenant, no como secreto criptográfico en esta primera versión.
+
+**Motivo:** Participa en identificación, búsqueda, ordenamiento y selección de cuentas.
+
+**Consecuencias:** No se expondrá a otros tenants ni a SuperAdmin; su posible cifrado futuro podrá reevaluarse.
+
+## D-034 — AES-256-GCM como contrato criptográfico inicial
+
+**Estado:** ACCEPTED
+
+**Decisión:** Las credenciales recuperables se cifrarán server-side con AES-256-GCM mediante APIs de Node.js, nonce aleatorio único de 96 bits y tag de autenticación de 128 bits.
+
+**Motivo:** Se requiere confidencialidad e integridad autenticada con una solución apropiada para el monolito actual.
+
+**Consecuencias:** La lectura fallará cerrada ante manipulación de ciphertext, nonce, tag o AAD, versión desconocida o clave incorrecta. AES-GCM no requiere salt, pero sí nonce único.
+
+## D-035 — Claves separadas por entorno
+
+**Estado:** ACCEPTED
+
+**Decisión:** Development/local, staging y production utilizarán claves diferentes y no compartirán capacidad de descifrado.
+
+**Motivo:** Un incidente o acceso legítimo en un entorno no debe comprometer datos de otro.
+
+**Consecuencias:** Claves, pruebas, backups y procedimientos de recuperación deberán conservar la separación entre entornos.
+
+## D-036 — Custodia inicial desacoplada mediante `KeyProvider`
+
+**Estado:** ACCEPTED
+
+**Decisión:** La custodia inicial usará una variable sensible del entorno de despliegue y el código accederá a las versiones de clave mediante una abstracción conceptual `KeyProvider`, sin depender directamente de Vercel.
+
+**Motivo:** Resolver el riesgo actual con complejidad proporcionada y preservar la posibilidad de cambiar el origen de las claves.
+
+**Consecuencias:** DTOs, UI y autorización no dependerán del proveedor de claves. En Vercel, la variable deberá configurarse como sensitive environment variable.
+
+## D-037 — KMS y envelope encryption quedan diferidos
+
+**Estado:** ACCEPTED
+
+**Decisión:** No se implementarán todavía KMS ni envelope encryption, pero la arquitectura quedará preparada para adoptar AWS KMS, Google Cloud KMS u otro sistema equivalente.
+
+**Motivo:** El estado y escala actuales no justifican aún esa complejidad operativa.
+
+**Consecuencias:** La decisión se reevaluará ante crecimiento, nuevos operadores, requisitos regulatorios o empresariales o un modelo de amenazas más exigente.
+
+## D-038 — Payload cifrado autocontenido y AAD estable como dirección conceptual
+
+**Estado:** ACCEPTED
+
+**Decisión:** Se prefiere conceptualmente un formato autocontenido de credencial cifrada: `encryptedPayload` acompañado por `keyVersion`. El AAD inicial identificará tipo de registro, ID, campo y versión de formato, sin depender de `organizationId`.
+
+**Motivo:** El payload cifrado autocontenido reduce estados parciales y el AAD vincula el secreto a su contexto estable sin acoplarse a un modelo multi-tenant aún inexistente.
+
+**Consecuencias:** Los nombres, tipos y schema Prisma definitivos permanecen abiertos; la clave nunca se almacenará en PostgreSQL. Este formato no es *envelope encryption* mediante DEK/KEK; esa adopción sigue diferida por D-037.
+
+## D-039 — Minimización de exposición y DTOs sin secretos
+
+**Estado:** ACCEPTED
+
+**Decisión:** Bootstrap, listados, filtros, reportes, navegación y DTOs normales no devolverán password, PIN ni material criptográfico. Crear o reemplazar un secreto podrá recibirlo, pero la respuesta normal no lo devolverá.
+
+**Motivo:** Cifrar la base no evita la exposición si todas las credenciales se descifran y distribuyen al navegador.
+
+**Consecuencias:** Editar, asignar o liberar perfiles no reenviará la contraseña; las consultas usarán selecciones y DTOs explícitos.
+
+## D-040 — Revelado explícito, mínimo y autorizado
+
+**Estado:** ACCEPTED
+
+**Decisión:** Las credenciales se revelarán mediante una operación server-side explícita para una cuenta y, cuando corresponda, un perfil concretos.
+
+**Motivo:** El plaintext solo debe existir ante una necesidad operativa identificable.
+
+**Consecuencias:** El flujo contemplará sesión, autorización, propósito, rate limiting, CSRF/origin, `no-store`, auditoría, logging seguro y estado efímero en frontend. MFA o reautenticación adicional quedan para una etapa futura.
+
+## D-041 — SuperAdmin denegado en operaciones de credenciales
+
+**Estado:** ACCEPTED
+
+**Decisión:** SuperAdmin no podrá revelar credenciales y no existirá break-glass en la primera versión.
+
+**Motivo:** SuperAdmin pertenece al control plane, no a la operación privada del tenant.
+
+**Consecuencias:** `control-plane` y `tenant-operations` tendrán contratos separados; las APIs administrativas no reutilizarán DTOs sensibles ni dependerán normalmente del servicio de credenciales.
+
+## D-042 — Sin exportación masiva inicial de credenciales
+
+**Estado:** ACCEPTED
+
+**Decisión:** Las exportaciones normales no contendrán password ni PIN y no se implementará inicialmente una exportación masiva sensible.
+
+**Motivo:** Un archivo con todas las credenciales en plaintext anularía gran parte de la reducción de riesgo conseguida.
+
+**Consecuencias:** Una futura exportación sensible requerirá una nueva decisión de arquitectura y producto.
+
+## D-043 — Entrega inicial manual segura
+
+**Estado:** ACCEPTED
+
+**Decisión:** Después de una venta o asignación, el revendedor podrá generar una entrega inicial explícita con los datos necesarios para ese servicio y perfil.
+
+**Motivo:** Entregar el acceso al cliente final es una capacidad central del producto.
+
+**Consecuencias:** Solo se descifrará la asignación concreta y el plaintext generado se tratará como efímero.
+
+## D-044 — Reentrega con la credencial actualmente válida
+
+**Estado:** ACCEPTED
+
+**Decisión:** El revendedor podrá reenviar los datos de una asignación activa, utilizando las credenciales actualmente válidas y no una copia histórica de la entrega original.
+
+**Motivo:** Las contraseñas y PIN pueden cambiar después de la venta.
+
+**Consecuencias:** La reentrega resolverá cliente, servicio, asignación, cuenta y perfil sin cargar todas las credenciales del inventario.
+
+## D-045 — Separación conceptual entre venta, asignación, credencial y entrega
+
+**Estado:** ACCEPTED
+
+**Decisión:** `Sale`, `Assignment`, `Credential` y `Delivery` serán conceptos distintos aunque todavía no se definan sus entidades finales.
+
+**Motivo:** Qué se vendió, qué está asignado, cuál es el acceso vigente y qué se comunicó tienen ciclos de vida diferentes.
+
+**Consecuencias:** El modelo Prisma definitivo se diseñará después sin usar mensajes históricos como fuente de credenciales.
+
+## D-046 — Historial de entregas sin secretos
+
+**Estado:** ACCEPTED
+
+**Decisión:** El historial registrará que ocurrió una entrega o reentrega, pero no almacenará password, PIN, ciphertext, plaintext revelado ni una copia persistente del mensaje completo cuando contenga secretos. El registro mínimo interno de seguridad y auditoría estará disponible en BASIC y PREMIUM.
+
+**Motivo:** La auditoría necesita metadatos y resultado, no duplicar el secreto.
+
+**Consecuencias:** Un concepto equivalente a `DeliveryEvent` podrá relacionar tipo o acción (`initial`, `resend` o equivalente), actor, cliente cuando aplique, asignación cuando aplique, referencia no secreta de cuenta/perfil, canal, resultado, fecha, request/event ID cuando aplique y, a futuro, organización. El formato y los enums definitivos permanecen TBD.
+
+## D-047 — Plantillas e instrucciones configurables por `Organization`
+
+**Estado:** ACCEPTED
+
+**Decisión:** Las plantillas, instrucciones de uso y condiciones de garantía serán configurables por organización y almacenarán variables, no credenciales reales.
+
+**Motivo:** Cada revendedor define sus propias condiciones; no son una política global hardcodeada de Island Play.
+
+**Consecuencias:** El mensaje con secretos se renderizará solo al entregar. Las entidades definitivas permanecen TBD.
+
+## D-048 — Entrega manual en BASIC y automatización en PREMIUM
+
+**Estado:** ACCEPTED
+
+**Decisión:** BASIC incluirá entrega inicial y reentrega manual seguras, revelado, generación/copia del mensaje, instrucciones configurables y auditoría interna mínima de entrega. PREMIUM podrá añadir envíos automáticos, reintentos, estados avanzados, historial visible avanzado, filtros, dashboards, métricas y orquestación.
+
+**Motivo:** La seguridad, incluida la auditoría mínima, es común a todos los planes; la automatización y la visibilidad avanzada aportan el valor diferencial Premium.
+
+**Consecuencias:** Ningún control esencial de protección de credenciales dependerá del plan contratado.
+
+## D-049 — Entregas externas explícitas y minimizadas
+
+**Estado:** ACCEPTED
+
+**Decisión:** WhatsApp y futuras automatizaciones solo recibirán el plaintext mínimo durante una entrega explícita. No se insertarán automáticamente credenciales en URLs desde listados generales y n8n no almacenará secretos salvo necesidad diseñada y protegida.
+
+**Motivo:** Los proveedores externos amplían la superficie de exposición.
+
+**Consecuencias:** Island Play seguirá siendo fuente de verdad y el usuario conocerá cuándo genera, copia o envía información sensible.
+
+## D-050 — Migración expand → migrate → contract, primero en staging
+
+**Estado:** ACCEPTED
+
+**Decisión:** Las credenciales existentes se migrarán mediante expansión compatible, dual read temporal, backfill idempotente y verificable, transición encrypted-only y contracción posterior separada. Todo se ensayará primero en Neon staging.
+
+**Motivo:** La transformación debe ser recuperable, observable y segura frente a concurrencia.
+
+**Consecuencias:** Production requerirá backup/restauración verificados, pruebas de negocio, entrega, reentrega y rollback o forward recovery exitosos en staging.
+
+## D-051 — Rotación versionada y recifrado progresivo
+
+**Estado:** ACCEPTED
+
+**Decisión:** Cada secreto identificará su versión de clave; habrá una versión activa, lectura temporal de versiones anteriores y recifrado progresivo con nonce nuevo.
+
+**Motivo:** Las claves deben poder rotarse sin indisponibilidad ni pérdida de acceso a datos vigentes.
+
+**Consecuencias:** Una clave anterior no se retirará mientras existan datos activos que dependan de ella. Ante compromiso también se cambiarán las credenciales externas si el plaintext pudo conocerse.
+
+## D-052 — Logging de credenciales por allowlist
+
+**Estado:** ACCEPTED
+
+**Decisión:** Logs, errores y auditoría registrarán metadatos allowlisted y nunca plaintext, bodies sensibles completos ni mensajes de entrega con credenciales.
+
+**Motivo:** El logging no debe convertirse en un almacén alternativo de secretos.
+
+**Consecuencias:** Proveedor, formato y retención definitivos de observabilidad permanecen TBD.
+
+## D-053 — Retirada de credenciales demo embebidas
+
+**Estado:** ACCEPTED
+
+**Decisión:** Login, seed, documentación y scripts no contendrán una credencial administrativa demo conocida. Staging y production se revisarán sin probar la contraseña conocida; si la identidad existe, se rotará o eliminará y se revocarán sus sesiones mediante un procedimiento autorizado.
+
+**Motivo:** Una credencial publicada en código o documentación deja de ser secreta y no debe proteger entornos reales.
+
+**Consecuencias:** Smokes usarán variables exclusivas de testing. Reescribir todo el historial Git no será requisito después de neutralizar la credencial, salvo decisión posterior.
+
+## D-054 — Capacidad inicial de BASIC como entitlement por organización
+
+**Estado:** ACCEPTED
+
+**Decisión:** BASIC tendrá inicialmente el entitlement conceptual `maxActiveCustomers = 100` por `Organization`. Un cliente final activo es un `Customer` que tiene al menos una asignación o servicio actualmente activo. El conteo es de clientes finales únicos: varios servicios del mismo cliente cuentan una sola vez.
+
+**Motivo:** La capacidad comercial debe corresponder al uso operativo real, no a usuarios de Island Play, registros históricos, servicios, cuentas, perfiles o ventas.
+
+**Consecuencias:** Un `Customer` histórico sin servicios activos no cuenta ni debe eliminarse. Renovar un cliente ya activo no incrementa el conteo y seguirá permitido en el límite. La capacidad pertenecerá al futuro concepto de plan/entitlement, no a reglas `if plan` dispersas.
+
+## D-055 — Aplicación no destructiva de la capacidad comercial
+
+**Estado:** ACCEPTED
+
+**Decisión:** Al alcanzar el entitlement de BASIC, solo se rechazará la operación que incremente clientes finales activos por encima del límite: de 99 a 100 se permite; de 100 a 101 se deniega y se orienta hacia PREMIUM. No se eliminarán, ocultarán, suspenderán ni secuestrarán datos existentes.
+
+**Motivo:** Un límite comercial no debe interrumpir la operación ni convertirse en una penalización destructiva para la organización.
+
+**Consecuencias:** En el límite seguirán permitidos login, lectura, gestión de clientes existentes, renovaciones, entrega/reentrega, inventario, facturación, upgrade y operaciones que reduzcan uso. PREMIUM podrá superar la capacidad de BASIC, pero su límite exacto permanece TBD y no se asume ilimitado. Si una organización baja de PREMIUM a BASIC con, por ejemplo, 230 clientes activos, conserva sus datos y puede operar o reducir uso, pero no podrá crecer hasta quedar dentro de su entitlement. La capacidad no altera cifrado, aislamiento, autorización, auditoría mínima ni integridad.
+
 ## Decisiones todavía no tomadas
 
 Los siguientes temas permanecen deliberadamente abiertos y no forman parte de las decisiones aceptadas anteriores:
 
 - modelo Prisma definitivo de `Organization`, identidad, membresía, plan y suscripción;
 - estrategia exacta de aislamiento adicional en PostgreSQL;
-- mecanismo de cifrado y custodia de credenciales de streaming;
+- nombres, tipos y schema Prisma definitivos para credenciales cifradas;
+- representación física definitiva del payload cifrado autocontenido y granularidad de una futura envelope encryption;
+- proveedor KMS y momento exacto de migración;
+- política futura de MFA o reautenticación para revelados;
+- formato definitivo de historial de entregas, plantillas e instrucciones;
+- política exacta de rate limiting, auditoría, logging y rotación;
 - modelo definitivo de venta, renovación, ledger y asignación de costos;
 - proveedor de OAuth/autenticación y combinación final de métodos;
 - duración y reglas exactas del trial;
+- modelos Prisma definitivos de plan, suscripción y entitlement;
+- definición técnica exacta y consulta para identificar un `Customer` activo;
+- umbrales y mensajes de advertencia previos al límite de capacidad;
+- límite exacto de PREMIUM y si podrá comunicarse comercialmente como ilimitado;
+- periodos de gracia, UX de upgrade y aplicación de la capacidad durante cambios de plan;
+- precio de BASIC y PREMIUM, monedas, proveedor de cobro, enums y mecanismo de feature flag o entitlement;
 - pasarela o pasarelas de pago, monedas e impuestos;
 - proveedor de WhatsApp y topología de n8n;
-- política de soporte excepcional del SuperAdmin;
+- política futura de soporte excepcional del SuperAdmin posterior a la primera versión sin break-glass;
 - estrategia exacta de backups, observabilidad y recuperación.
