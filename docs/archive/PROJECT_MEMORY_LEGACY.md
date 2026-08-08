@@ -1,3 +1,7 @@
+# DEPRECATED / HISTORICAL ONLY
+
+> Este documento refleja una etapa anterior de Larsa Play. Puede contener nombres, URLs, infraestructura y decisiones obsoletas. Las fuentes oficiales actuales son `PROJECT_HANDOFF.md`, `docs/architecture/AS_IS.md`, `docs/architecture/DECISIONS.md` y `docs/ROADMAP.md`.
+
 # Memoria del Proyecto: Larsa Play
 
 Ultima actualizacion: 2026-07-18
@@ -36,16 +40,6 @@ La URL beta desplegada en Vercel es:
 La base remota usa Neon Postgres. La URL real de conexion no debe guardarse en
 documentos ni compartirse por chat; vive como variable `DATABASE_URL` en Vercel
 y en la terminal solo durante migraciones/seed.
-
-## Acceso demo
-
-Usuario creado por seed:
-
-- Correo: `admin@larsaplay.local`
-- Contrasena inicial: `admin123`
-
-Pendiente antes de comercializar: cambiar contrasena y agregar flujo de cambio
-seguro desde el panel.
 
 ## Stack tecnico
 
