@@ -21,3 +21,6 @@ docs/design-references/netfly
 scripts/netfly-*.mjs
 app.js
 .vercel
+
+# Git repository backups
+*.bundle
