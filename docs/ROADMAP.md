@@ -10,7 +10,7 @@ Consolidar el estado AS-IS, las decisiones aceptadas, las reglas del repositorio
 
 ## B. Contención de riesgos críticos actuales
 
-Reducir primero los riesgos de credenciales, acceso administrativo, autorización y exposición de información sensible que impiden una comercialización segura.
+Reducir primero los riesgos de credenciales, acceso administrativo, autorización y exposición de información sensible que impiden una comercialización segura. Esta fase incluye proteger passwords de cuentas y PIN mediante la estrategia aprobada, minimizar su exposición, retirar la credencial administrativa demo y migrar los datos con el patrón expand → migrate → contract, ensayado primero en staging.
 
 ## C. Tests mínimos de seguridad y dominio
 
@@ -48,7 +48,7 @@ Consolidar el sistema visual y garantizar los flujos operativos críticos en mó
 
 ## K. Planes, suscripciones y trial
 
-Modelar planes, accesos, trials, estados de suscripción y entitlements pertenecientes a la organización.
+Modelar planes, accesos, trials, estados de suscripción y entitlements pertenecientes a la organización, incluidas capacidades por plan como un límite conceptual de clientes finales activos. La definición técnica, los umbrales y la aplicación concreta de esos límites se decidirán en esa fase.
 
 ## L. Registro, OAuth y onboarding
 
