@@ -13,4 +13,12 @@ export type {
   EncryptCredentialInput,
   EncryptCredentialResult
 } from "./credential-crypto";
+export {
+  EnvironmentKeyProvider,
+  EnvironmentKeyProviderError
+} from "./environment-key-provider";
+export type {
+  EnvironmentKeyProviderErrorCode,
+  EnvironmentKeySource
+} from "./environment-key-provider";
 export type { KeyProvider } from "./key-provider";
