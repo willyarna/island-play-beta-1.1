@@ -154,6 +154,8 @@ model Account {
   providerId    String?
   email         String
   password      String
+  passwordEncryptedPayload String? @db.Text
+  passwordKeyVersion       String? @db.VarChar(64)
   notes         String?
   billingDate   DateTime
   purchaseCents Int       @default(0)
@@ -193,6 +195,8 @@ model Profile {
   clientId    String?
   name        String
   pin         String?
+  pinEncryptedPayload String? @db.Text
+  pinKeyVersion       String? @db.VarChar(64)
   dueDate     DateTime
   soldCents   Int           @default(0)
   status      ProfileStatus @default(FREE)
