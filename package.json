@@ -8,6 +8,7 @@
     "start": "next start",
     "test:crypto": "node --conditions=react-server --import tsx --test src/lib/server/credentials/credential-crypto.test.ts",
     "test:credential-keys": "node --conditions=react-server --import tsx --test src/lib/server/credentials/environment-key-provider.test.ts",
+    "test:credential-dto": "node --conditions=react-server --import tsx --test src/lib/server/accounts/operational-account-dto.test.ts",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 import { jsonError, jsonOk, readJson } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/security";
+import {
+  deliveryClientSelect,
+  operationalAccountSelect,
+  toComboSaleDeliveryDto
+} from "@/lib/server/accounts/operational-account-dto";
+import { comboSaleProfileSelect } from "@/lib/server/sales/sale-profile-selects";
 import { comboSaleSchema } from "@/lib/validation";
 
 function atDate(value: string) {
@@ -57,17 +63,7 @@ export async function POST(request: Request) {
       const existingItems = input.items.filter((item) => item.mode === "EXISTING");
       const profiles = await tx.profile.findMany({
         where: { id: { in: existingItems.map((item) => item.profileId).filter(Boolean) as string[] }, deletedAt: null },
-        include: {
-          account: {
-            select: {
-              id: true,
-              productId: true,
-              deletedAt: true,
-              email: true,
-              provider: { select: { name: true } }
-            }
-          }
-        }
+        select: comboSaleProfileSelect
       });
 
       const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
@@ -91,7 +87,8 @@ export async function POST(request: Request) {
               dueDate: atDate(item.dueDate),
               soldCents: item.soldCents,
               status: ProfileStatus.OCCUPIED
-            }
+            },
+            select: { id: true }
           });
           return { accountId: item.accountId || "", profileId: updated.id };
         })
@@ -129,7 +126,11 @@ export async function POST(request: Request) {
               }))
             }
           },
-          include: { profiles: true }
+          select: {
+            id: true,
+            email: true,
+            profiles: { select: { id: true }, orderBy: { name: "asc" } }
+          }
         });
         createdDeliveries.push({ accountId: createdAccount.id, profileId: createdAccount.profiles[0]?.id || null });
 
@@ -167,40 +168,24 @@ export async function POST(request: Request) {
     const [client, accounts] = await Promise.all([
       prisma.client.findFirst({
         where: { id: result.clientId, deletedAt: null },
-        select: { id: true, name: true, phone: true, email: true, notes: true, status: true }
+        select: deliveryClientSelect
       }),
       prisma.account.findMany({
         where: { id: { in: accountIds }, deletedAt: null },
-        include: {
-          product: { select: { id: true, name: true, color: true, imageUrl: true } },
-          provider: { select: { id: true, name: true } },
-          profiles: {
-            where: { deletedAt: null },
-            include: { client: { select: { id: true, name: true, phone: true } } },
-            orderBy: { name: "asc" }
-          }
-        }
+        select: operationalAccountSelect
       })
     ]);
-    const accountById = new Map(
-      accounts.map((account) => [
-        account.id,
-        {
-          ...account,
-          billingDate: account.billingDate.toISOString(),
-          profiles: account.profiles.map((profile) => ({ ...profile, dueDate: profile.dueDate.toISOString() }))
-        }
-      ])
-    );
+    const accountById = new Map(accounts.map((account) => [account.id, account]));
+    const deliveryEntries = result.deliveries.flatMap((delivery) => {
+      const account = accountById.get(delivery.accountId);
+      return account ? [{ account, profileId: delivery.profileId }] : [];
+    });
 
     return jsonOk({
       ...result,
-      delivery: {
-        client,
-        entries: result.deliveries
-          .map((delivery) => ({ account: accountById.get(delivery.accountId), profileId: delivery.profileId }))
-          .filter((entry) => entry.account)
-      }
+      delivery: client
+        ? toComboSaleDeliveryDto({ client, entries: deliveryEntries })
+        : { client: null, entries: [] }
     });
   } catch (error) {
     if (error instanceof Error) {
