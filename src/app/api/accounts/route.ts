@@ -7,6 +7,10 @@ import {
   operationalAccountSelect,
   toOperationalAccountDto
 } from "@/lib/server/accounts/operational-account-dto";
+import {
+  normalizeProfilePin,
+  protectCreatedAccountCredentials
+} from "@/lib/server/credentials/credential-dual-write";
 import { accountSchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
@@ -54,7 +58,7 @@ export async function POST(request: Request) {
           profiles: {
             create: input.profiles.map((profile) => ({
               name: profile.name,
-              pin: profile.pin,
+              pin: normalizeProfilePin(profile.pin),
               clientId: profile.clientId || null,
               dueDate: new Date(`${profile.dueDate}T00:00:00`),
               soldCents: profile.soldCents,
@@ -63,6 +67,13 @@ export async function POST(request: Request) {
           }
         },
         select: operationalAccountSelect
+      });
+
+      await protectCreatedAccountCredentials({
+        transaction: tx,
+        accountId: created.id,
+        password: created.password,
+        profiles: created.profiles
       });
 
       if (input.purchaseCents > 0) {
@@ -130,7 +141,7 @@ export async function PUT(request: Request) {
           profiles: {
             create: input.profiles.map((profile) => ({
               name: profile.name,
-              pin: profile.pin,
+              pin: normalizeProfilePin(profile.pin),
               clientId: profile.clientId || null,
               dueDate: new Date(`${profile.dueDate}T00:00:00`),
               soldCents: profile.soldCents,
@@ -139,6 +150,13 @@ export async function PUT(request: Request) {
           }
         },
         select: operationalAccountSelect
+      });
+
+      await protectCreatedAccountCredentials({
+        transaction: tx,
+        accountId: updated.id,
+        password: updated.password,
+        profiles: updated.profiles
       });
 
       for (const clientId of affectedClientIds) {

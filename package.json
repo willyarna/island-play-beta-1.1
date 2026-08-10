@@ -9,16 +9,18 @@
     "test:crypto": "node --conditions=react-server --import tsx --test src/lib/server/credentials/credential-crypto.test.ts",
     "test:credential-keys": "node --conditions=react-server --import tsx --test src/lib/server/credentials/environment-key-provider.test.ts",
     "test:credential-dto": "node --conditions=react-server --import tsx --test src/lib/server/accounts/operational-account-dto.test.ts",
+    "test:credential-dual-write": "node --conditions=react-server --import tsx --test src/lib/server/credentials/credential-dual-write.test.ts",
+    "test:safe-error-logger": "node --conditions=react-server --import tsx --test src/lib/server/observability/safe-error-logger.test.ts",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "node --conditions=react-server --import tsx prisma/seed.ts",
     "dev:local": "PRISMA_QUERY_ENGINE_LIBRARY=/tmp/larsa-prisma-engines/libquery_engine-debian-openssl-3.0.x.so.node node node_modules/next/dist/bin/next dev --webpack",
     "build:local": "XDG_CACHE_HOME=/tmp/larsa-xdg-cache PRISMA_ENGINES_CACHE_DIR=/tmp/larsa-prisma-cache PRISMA_SCHEMA_ENGINE_BINARY=/tmp/larsa-prisma-engines/schema-engine-debian-openssl-3.0.x PRISMA_QUERY_ENGINE_LIBRARY=/tmp/larsa-prisma-engines/libquery_engine-debian-openssl-3.0.x.so.node node node_modules/prisma/build/index.js generate && node node_modules/next/dist/bin/next build",
     "prisma:migrate:local": "XDG_CACHE_HOME=/tmp/larsa-xdg-cache PRISMA_ENGINES_CACHE_DIR=/tmp/larsa-prisma-cache PRISMA_SCHEMA_ENGINE_BINARY=/tmp/larsa-prisma-engines/schema-engine-debian-openssl-3.0.x PRISMA_QUERY_ENGINE_LIBRARY=/tmp/larsa-prisma-engines/libquery_engine-debian-openssl-3.0.x.so.node node node_modules/prisma/build/index.js migrate dev",
-    "db:seed:local": "ESBUILD_BINARY_PATH=/tmp/larsa-esbuild/esbuild PRISMA_QUERY_ENGINE_LIBRARY=/tmp/larsa-prisma-engines/libquery_engine-debian-openssl-3.0.x.so.node node node_modules/tsx/dist/cli.mjs prisma/seed.ts"
+    "db:seed:local": "ESBUILD_BINARY_PATH=/tmp/larsa-esbuild/esbuild PRISMA_QUERY_ENGINE_LIBRARY=/tmp/larsa-prisma-engines/libquery_engine-debian-openssl-3.0.x.so.node node --conditions=react-server --import tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.12.0",
