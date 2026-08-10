@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 import { jsonError, jsonOk, readJson } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/security";
+import {
+  deliveryClientSelect,
+  operationalAccountSelect,
+  toIndividualSaleDeliveryDto
+} from "@/lib/server/accounts/operational-account-dto";
+import { individualSaleProfileSelect } from "@/lib/server/sales/sale-profile-selects";
 import { individualSaleSchema } from "@/lib/validation";
 
 function atDate(value: string) {
@@ -50,16 +56,7 @@ export async function POST(request: Request) {
 
         const profile = await tx.profile.findFirst({
           where: { id: input.profileId, deletedAt: null },
-          include: {
-            account: {
-              select: {
-                id: true,
-                email: true,
-                productId: true,
-                deletedAt: true
-              }
-            }
-          }
+          select: individualSaleProfileSelect
         });
 
         if (!profile || profile.account.deletedAt) throw new Error("PROFILE_NOT_FOUND");
@@ -77,7 +74,8 @@ export async function POST(request: Request) {
             dueDate: atDate(input.dueDate),
             soldCents: input.soldCents,
             status: ProfileStatus.OCCUPIED
-          }
+          },
+          select: { id: true }
         });
 
         await tx.client.update({
@@ -122,7 +120,11 @@ export async function POST(request: Request) {
             }))
           }
         },
-        include: { profiles: true }
+        select: {
+          id: true,
+          email: true,
+          profiles: { select: { id: true }, orderBy: { name: "asc" } }
+        }
       });
 
       if (input.purchaseCents > 0) {
@@ -157,33 +159,17 @@ export async function POST(request: Request) {
 
     const account = await prisma.account.findFirst({
       where: { id: result.accountId, deletedAt: null },
-      include: {
-        product: { select: { id: true, name: true, color: true, imageUrl: true } },
-        provider: { select: { id: true, name: true } },
-        profiles: {
-          where: { deletedAt: null },
-          include: { client: { select: { id: true, name: true, phone: true } } },
-          orderBy: { name: "asc" }
-        }
-      }
+      select: operationalAccountSelect
     });
     const client = await prisma.client.findFirst({
       where: { id: result.clientId, deletedAt: null },
-      select: { id: true, name: true, phone: true, email: true, notes: true, status: true }
+      select: deliveryClientSelect
     });
 
     return jsonOk({
       ...result,
-      delivery: account
-        ? {
-            client,
-            profileId: result.profileId,
-            account: {
-              ...account,
-              billingDate: account.billingDate.toISOString(),
-              profiles: account.profiles.map((profile) => ({ ...profile, dueDate: profile.dueDate.toISOString() }))
-            }
-          }
+      delivery: account && client
+        ? toIndividualSaleDeliveryDto({ client, profileId: result.profileId, account })
         : null
     });
   } catch (error) {

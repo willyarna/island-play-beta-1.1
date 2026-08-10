@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { jsonError, jsonOk, readJson } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/security";
+import {
+  operationalAccountSelect,
+  toOperationalAccountDto
+} from "@/lib/server/accounts/operational-account-dto";
 import { accountSchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
@@ -21,19 +25,11 @@ export async function GET(request: Request) {
       productId: productId && productId !== "all" ? productId : undefined,
       email: q ? { contains: q, mode: "insensitive" } : undefined
     },
-    include: {
-      product: { select: { id: true, name: true, color: true, imageUrl: true } },
-      provider: { select: { id: true, name: true } },
-      profiles: {
-        where: { deletedAt: null },
-        include: { client: { select: { id: true, name: true, phone: true } } },
-        orderBy: { name: "asc" }
-      }
-    },
+    select: operationalAccountSelect,
     orderBy: { email: "asc" }
   });
 
-  return jsonOk({ accounts });
+  return jsonOk({ accounts: accounts.map(toOperationalAccountDto) });
 }
 
 export async function POST(request: Request) {
@@ -66,7 +62,7 @@ export async function POST(request: Request) {
             }))
           }
         },
-        include: { profiles: true }
+        select: operationalAccountSelect
       });
 
       if (input.purchaseCents > 0) {
@@ -90,7 +86,7 @@ export async function POST(request: Request) {
       return created;
     });
 
-    return jsonOk({ account });
+    return jsonOk({ account: toOperationalAccountDto(account) });
   } catch (error) {
     return jsonError(error);
   }
@@ -142,7 +138,7 @@ export async function PUT(request: Request) {
             }))
           }
         },
-        include: { profiles: true }
+        select: operationalAccountSelect
       });
 
       for (const clientId of affectedClientIds) {
@@ -169,7 +165,7 @@ export async function PUT(request: Request) {
       return updated;
     });
 
-    return jsonOk({ account });
+    return jsonOk({ account: toOperationalAccountDto(account) });
   } catch (error) {
     return jsonError(error);
   }
