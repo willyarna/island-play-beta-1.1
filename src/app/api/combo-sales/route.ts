@@ -8,6 +8,11 @@ import {
   operationalAccountSelect,
   toComboSaleDeliveryDto
 } from "@/lib/server/accounts/operational-account-dto";
+import {
+  normalizeProfilePin,
+  prepareProfilePinDualWrite,
+  protectCreatedAccountCredentials
+} from "@/lib/server/credentials/credential-dual-write";
 import { comboSaleProfileSelect } from "@/lib/server/sales/sale-profile-selects";
 import { comboSaleSchema } from "@/lib/validation";
 
@@ -76,14 +81,21 @@ export async function POST(request: Request) {
         if (profile.clientId && profile.clientId !== client.id) throw new Error("PROFILE_BUSY");
       }
 
+      const existingPinWrites = await Promise.all(
+        existingItems.map((item) => prepareProfilePinDualWrite({
+          profileId: item.profileId || "",
+          pin: item.pin
+        }))
+      );
+
       const existingDeliveries = await Promise.all(
-        existingItems.map(async (item) => {
+        existingItems.map(async (item, index) => {
           const updated = await tx.profile.update({
             where: { id: item.profileId || "" },
             data: {
               clientId: client.id,
               name: item.profileName,
-              pin: item.pin || null,
+              ...existingPinWrites[index],
               dueDate: atDate(item.dueDate),
               soldCents: item.soldCents,
               status: ProfileStatus.OCCUPIED
@@ -104,13 +116,14 @@ export async function POST(request: Request) {
         const provider = item.providerId
           ? await tx.provider.findFirst({ where: { id: item.providerId, deletedAt: null }, select: { name: true } })
           : null;
+        const accountPassword = item.password?.trim() || "";
 
         const createdAccount = await tx.account.create({
           data: {
             productId: item.productId,
             providerId: item.providerId || null,
             email: item.email?.trim() || "",
-            password: item.password?.trim() || "",
+            password: accountPassword,
             notes: `Creada desde venta combo ${combo.name}`,
             billingDate: atDate(item.dueDate),
             purchaseCents: item.purchaseCents,
@@ -118,7 +131,7 @@ export async function POST(request: Request) {
             profiles: {
               create: Array.from({ length: product.maxProfiles }, (_, index) => ({
                 name: index === 0 ? item.profileName : `Perfil ${index + 1}`,
-                pin: index === 0 ? item.pin || null : `${1000 + index + 1}`,
+                pin: index === 0 ? normalizeProfilePin(item.pin) : `${1000 + index + 1}`,
                 clientId: index === 0 ? client.id : null,
                 dueDate: atDate(item.dueDate),
                 soldCents: index === 0 ? item.soldCents : 0,
@@ -129,8 +142,14 @@ export async function POST(request: Request) {
           select: {
             id: true,
             email: true,
-            profiles: { select: { id: true }, orderBy: { name: "asc" } }
+            profiles: { select: { id: true, pin: true }, orderBy: { name: "asc" } }
           }
+        });
+        await protectCreatedAccountCredentials({
+          transaction: tx,
+          accountId: createdAccount.id,
+          password: accountPassword,
+          profiles: createdAccount.profiles
         });
         createdDeliveries.push({ accountId: createdAccount.id, profileId: createdAccount.profiles[0]?.id || null });
 

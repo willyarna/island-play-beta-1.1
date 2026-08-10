@@ -1,5 +1,11 @@
 import { PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import {
+  getCredentialKeyProvider,
+  normalizeProfilePin,
+  protectCreatedAccountCredentials
+} from "../src/lib/server/credentials";
+import { logSafeError } from "../src/lib/server/observability/safe-error-logger";
 
 const prisma = new PrismaClient();
 
@@ -10,6 +16,7 @@ const addDays = (days: number) => {
 };
 
 async function main() {
+  const keyProvider = getCredentialKeyProvider();
   const passwordHash = await bcrypt.hash("admin123", 12);
 
   const admin = await prisma.user.upsert({
@@ -72,25 +79,40 @@ async function main() {
     }
   });
 
-  await prisma.account.create({
-    data: {
-      productId: netflix.id,
-      providerId: provider.id,
-      email: "demo.netflix@larsaplay.local",
-      password: "demo1234",
-      notes: "Cuenta demo sembrada",
-      billingDate: addDays(30),
-      purchaseCents: 890000,
-      profiles: {
-        create: [
-          { name: "crypsux", pin: "1302", dueDate: addDays(30), soldCents: 1200000, status: "OCCUPIED", clientId: client.id },
-          { name: "Perfil 2", pin: "2222", dueDate: addDays(30) },
-          { name: "Perfil 3", pin: "3333", dueDate: addDays(30) },
-          { name: "Perfil 4", pin: "4444", dueDate: addDays(30) },
-          { name: "Perfil 5", pin: "5555", dueDate: addDays(30) }
-        ]
+  await prisma.$transaction(async (tx) => {
+    const account = await tx.account.create({
+      data: {
+        productId: netflix.id,
+        providerId: provider.id,
+        email: "demo.netflix@larsaplay.local",
+        password: "demo1234",
+        notes: "Cuenta demo sembrada",
+        billingDate: addDays(30),
+        purchaseCents: 890000,
+        profiles: {
+          create: [
+            { name: "crypsux", pin: normalizeProfilePin("1302"), dueDate: addDays(30), soldCents: 1200000, status: "OCCUPIED", clientId: client.id },
+            { name: "Perfil 2", pin: normalizeProfilePin("2222"), dueDate: addDays(30) },
+            { name: "Perfil 3", pin: normalizeProfilePin("3333"), dueDate: addDays(30) },
+            { name: "Perfil 4", pin: normalizeProfilePin("4444"), dueDate: addDays(30) },
+            { name: "Perfil 5", pin: normalizeProfilePin("5555"), dueDate: addDays(30) }
+          ]
+        }
+      },
+      select: {
+        id: true,
+        password: true,
+        profiles: { select: { id: true, pin: true } }
       }
-    }
+    });
+
+    await protectCreatedAccountCredentials({
+      transaction: tx,
+      accountId: account.id,
+      password: account.password,
+      profiles: account.profiles,
+      keyProvider
+    });
   });
 
   await prisma.setting.upsert({
@@ -120,7 +142,7 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (error) => {
-    console.error(error);
+    logSafeError(error, "DATABASE_SEED");
     await prisma.$disconnect();
     process.exit(1);
   });

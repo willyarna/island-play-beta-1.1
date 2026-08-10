@@ -8,6 +8,11 @@ import {
   operationalAccountSelect,
   toIndividualSaleDeliveryDto
 } from "@/lib/server/accounts/operational-account-dto";
+import {
+  normalizeProfilePin,
+  prepareProfilePinDualWrite,
+  protectCreatedAccountCredentials
+} from "@/lib/server/credentials/credential-dual-write";
 import { individualSaleProfileSelect } from "@/lib/server/sales/sale-profile-selects";
 import { individualSaleSchema } from "@/lib/validation";
 
@@ -65,12 +70,16 @@ export async function POST(request: Request) {
         if (profile.clientId && profile.clientId !== client.id) throw new Error("PROFILE_BUSY");
 
         const previousSoldCents = profile.soldCents;
+        const pinWrite = await prepareProfilePinDualWrite({
+          profileId: profile.id,
+          pin: input.pin
+        });
         const updatedProfile = await tx.profile.update({
           where: { id: profile.id },
           data: {
             clientId: client.id,
             name: input.profileName,
-            pin: input.pin || null,
+            ...pinWrite,
             dueDate: atDate(input.dueDate),
             soldCents: input.soldCents,
             status: ProfileStatus.OCCUPIED
@@ -98,13 +107,14 @@ export async function POST(request: Request) {
       }
 
       if (!input.email?.trim() || !input.password?.trim()) throw new Error("ACCOUNT_DATA_REQUIRED");
+      const accountPassword = input.password.trim();
 
       const createdAccount = await tx.account.create({
         data: {
           productId: product.id,
           providerId: input.providerId || null,
           email: input.email.trim(),
-          password: input.password.trim(),
+          password: accountPassword,
           notes: input.notes || "Creada desde venta individual",
           billingDate: atDate(input.dueDate),
           purchaseCents: input.purchaseCents,
@@ -112,7 +122,7 @@ export async function POST(request: Request) {
           profiles: {
             create: Array.from({ length: product.maxProfiles }, (_, index) => ({
               name: index === 0 ? input.profileName : `Perfil ${index + 1}`,
-              pin: index === 0 ? input.pin || null : `${1000 + index + 1}`,
+              pin: index === 0 ? normalizeProfilePin(input.pin) : `${1000 + index + 1}`,
               clientId: index === 0 ? client.id : null,
               dueDate: atDate(input.dueDate),
               soldCents: index === 0 ? input.soldCents : 0,
@@ -123,8 +133,15 @@ export async function POST(request: Request) {
         select: {
           id: true,
           email: true,
-          profiles: { select: { id: true }, orderBy: { name: "asc" } }
+          profiles: { select: { id: true, pin: true }, orderBy: { name: "asc" } }
         }
+      });
+
+      await protectCreatedAccountCredentials({
+        transaction: tx,
+        accountId: createdAccount.id,
+        password: accountPassword,
+        profiles: createdAccount.profiles
       });
 
       if (input.purchaseCents > 0) {
